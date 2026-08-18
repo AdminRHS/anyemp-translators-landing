@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translator Vacancy — AnyEmp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@600;700;800&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    Revised 2026-08-13, round 9 — real feedback, several changes at once:
+    1. New opening stop added — "The Bridgewood Crossing" (Kingdom
+       overview) — before Meet Hazel, so the page establishes the world
+       first. Real prompt written for it in
+       11_Background_Prompts/11_BACKGROUND_PROMPTS.md (§0) — not generated
+       yet, so this stop uses a gradient placeholder background, flagged
+       below, instead of a real video. Every stop after it shifted by one
+       index (Meet Hazel is now stop 1, Notice Board is now stop 7).
+    2. "It should be a vacancy, not just 'the role'" — reworded the Bridge
+       Workshop and Notice Board copy into real open-vacancy framing
+       ("Open Vacancy," "Apply for This Vacancy") instead of generic
+       "what the role involves" language.
+    3. "More metaphoric content" + "not enough text" — added a short
+       narrative sentence to every stop that only had one bare fact line
+       before (Bridge Itself, Sorted Shelves, Firefly Lanterns, Resting
+       Bank), grounded in the Bridgewood Crossing metaphor already
+       established elsewhere in this project — no new facts invented,
+       just more of the real world-building voice wrapped around them.
+    4. Sorted Shelves — Iryna wants a new version of that background with
+       the tool names hand-lettered directly into the image (prompt
+       written, §4-revised in the same prompts file) so the HTML card
+       overlay won't be needed there at all once it's generated. Not
+       generated yet, so this build keeps the existing card treatment for
+       now, flagged in-code, rather than leaving the stop empty.
+  */
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; }
+  body{
+    font-family:'Open Sans', sans-serif;
+    background:#08120f;
+    color:#fff;
+    overflow:hidden;
+  }
+  :root{
+    /* Real fix, 2026-08-17 (design review call) — Translators' real
+       department color is yellow, confirmed on the call ("мы уже сказали
+       желтый, забили") — the rust-orange picked earlier today was a
+       reasonable "at least not blue" guess, but not the real color.
+       Using AnyEmp's own established brand yellow (--yellow-cta: #F2C94C
+       in AnyEmp_LGN_Department_Page) rather than inventing a new one, so
+       it's consistent with the rest of the design system. Still worth a
+       final confirmation that this is the exact intended shade, but it's
+       the real established yellow already in use elsewhere, not a guess.
+       Centralized here — every accent on the site inherits from these
+       two variables. */
+    --dept-trn: #F2C94C;
+    --dept-trn-rgb: 242, 201, 76;
+    --font-display: 'Poppins', sans-serif;
+    --font-body: 'Open Sans', sans-serif;
+    --tshadow: 0 2px 14px rgba(0,0,0,0.75), 0 1px 3px rgba(0,0,0,0.9);
+  }
+
+  .scroll-container{
+    height:100vh; width:100%;
+    overflow-y:scroll; overflow-x:hidden;
+    scroll-snap-type:y mandatory;
+    scrollbar-width:none; -ms-overflow-style:none;
+    background:#08120f;
+  }
+  .scroll-container::-webkit-scrollbar{ display:none; }
+
+  .corner-logo{
+    position:fixed; top:18px; left:20px; z-index:1000;
+    width:52px; height:auto; object-fit:contain;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+  }
+
+  .elevator-panel{
+    position:fixed; right:24px; top:50%; transform:translateY(-50%); z-index:1000;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    padding:16px 11px;
+    background: rgba(8,18,15,0.45);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:22px;
+    backdrop-filter: blur(10px);
+  }
+  .floor-label{
+    font-family: var(--font-display); font-weight:700; font-size:17px;
+    color: var(--dept-trn); min-width:2ch; text-align:center;
+    transition: color .3s ease;
+  }
+  .floor-dots{ display:flex; flex-direction:column; gap:9px; }
+  .floor-dots .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: rgba(255,255,255,0.3);
+    transition: all .4s ease;
+  }
+  .floor-dots .dot.is-active{
+    width:10px; height:10px;
+    background: var(--dept-trn);
+    box-shadow: 0 0 10px 2px rgba(var(--dept-trn-rgb),0.7);
+  }
+
+  .scene{
+    position:relative; height:100vh; width:100%;
+    scroll-snap-align:start; overflow:hidden;
+    display:flex;
+  }
+  .scene-bg{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:0; pointer-events:none;
+  }
+  .scene-overlay{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+
+  .scene-content{
+    position:relative; z-index:2; padding:0 7vw;
+    opacity:0; transform:translateY(24px);
+    transition: opacity .8s ease, transform .8s ease;
+  }
+  .scene.is-visible .scene-content{ opacity:1; transform:translateY(0); }
+  @media (prefers-reduced-motion: reduce){
+    .scene-content{ opacity:1; transform:none; transition:none; }
+    #hazelHint{ animation:none; opacity:1; }
+  }
+
+  .eyebrow{
+    font-family: var(--font-display); font-weight:700; font-size:13px;
+    letter-spacing:0.14em; text-transform:uppercase; color: var(--dept-trn);
+    margin-bottom:18px; text-shadow: var(--tshadow);
+  }
+  h1{
+    font-family: var(--font-display); font-weight:700;
+    font-size:clamp(1.9rem, 4.4vw, 2.9rem); line-height:1.3; max-width:20ch;
+    text-shadow: var(--tshadow); margin-bottom:24px;
+  }
+  h1 .accent{ color: var(--dept-trn); }
+  h2{
+    font-family: var(--font-display); font-weight:700;
+    font-size:clamp(1.6rem, 3.4vw, 2.3rem); line-height:1.3; max-width:20ch;
+    text-shadow: var(--tshadow); margin-bottom:8px;
+  }
+  .lede, .section-sub{
+    font-size:1rem; color:rgba(255,255,255,0.88); max-width:52ch; line-height:1.65; margin-top:26px;
+    text-shadow: var(--tshadow);
+  }
+
+  /* Stop 0 — The Bridgewood Crossing (Kingdom overview, new opening).
+     Real design pass, 2026-08-17 (round 7) — full analysis + fixes:
+     1. Dropped the redundant second kicker line ("Welcome to") — one
+        eyebrow ("The Kingdom") is enough context before the title.
+     2. Card shrunk (narrower, less padding, smaller type) so the bridge —
+        the actual subject of "Bridgewood Crossing" — stays visible
+        around it instead of being fully covered.
+     3. Title color originally moved off --dept-trn (then rust-orange) to
+        a dedicated warm gold, since rust-orange sat too close in hue to
+        the orange sunset sky. Real fix, 2026-08-17 (design review call):
+        --dept-trn is now the real established AnyEmp yellow (#F2C94C),
+        which no longer clashes the same way — consolidated the hero
+        title back onto --dept-trn directly instead of keeping a separate
+        invented shade, so the eyebrow and the title are the exact same
+        real yellow rather than two subtly different near-yellows.
+     4. Tightened vertical rhythm and gave the CTA more visual weight
+        (larger, glowing border) so it doesn't read as an afterthought
+        under a hero-scale title. */
+  #scene0{ align-items:stretch; justify-content:center; }
+  #floor0-wrap{ width:100%; }
+  #floor0{
+    width:100%; height:100%; display:flex; flex-direction:column;
+    justify-content:space-between; align-items:center;
+    padding:7vh 0 6vh;
+  }
+  .kingdom-heading{ width:100%; max-width:760px; align-self:center; text-align:center; transform:translateY(30px); }
+  .kingdom-heading h1{
+    max-width:none; margin-bottom:0; line-height:1.15;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .kingdom-heading .accent{
+    font-family:'Cinzel', serif; font-weight:600; color: var(--dept-trn);
+    font-size:clamp(2.6rem, 6vw, 4.4rem); letter-spacing:0.02em; line-height:1.1;
+    text-shadow: 0 0 24px rgba(var(--dept-trn-rgb),0.6), 0 0 54px rgba(var(--dept-trn-rgb),0.35), var(--tshadow);
+  }
+  .kingdom-heading .accent .dot{ color:#fff; -webkit-text-fill-color:#fff; text-shadow:var(--tshadow); }
+  /* Round 8 — the rounded-rect card read as a generic UI panel dropped
+     onto a painterly illustration ("out of design"). Replaced with a
+     soft, edgeless shadow pool instead — no visible border/box, just
+     atmospheric darkening behind the text, closer to film subtitles than
+     a UI card, so it sits inside the illustration rather than on top of it. */
+  .kingdom-para{
+    max-width:680px; text-align:center; font-size:0.95rem; line-height:1.65;
+    background: radial-gradient(ellipse 62% 75% at center, rgba(6,14,12,0.8) 0%, rgba(6,14,12,0.55) 55%, rgba(6,14,12,0) 85%);
+    padding:34px 44px; text-shadow: var(--tshadow);
+  }
+  .kingdom-cta{ width:100%; text-align:center; }
+  .kingdom-cta .scroll-btn{
+    font-size:16px; padding:15px 30px;
+    border-color: var(--dept-trn);
+    box-shadow: 0 0 24px rgba(var(--dept-trn-rgb),0.3);
+  }
+
+  /* Stop 1 — Meet Hazel: no portrait, just text, click-through dialogue.
+     Text sits on the right, bottom-anchored, so Hazel herself (positioned
+     left in the source video) stays fully visible and unobstructed. */
+  #scene1{ align-items:flex-end; justify-content:flex-end; }
+  #floor1 { max-width:560px; padding-bottom:10vh; text-align:left; }
+  .speech-bubble{
+    font-family: var(--font-display); font-weight:600; font-size:1.15rem;
+    line-height:1.6; color:#fff; text-shadow: var(--tshadow);
+    cursor:pointer; max-width:56ch;
+  }
+  .speech-bubble .who{
+    display:block; font-family: var(--font-body); font-weight:700;
+    font-size:0.68rem; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--dept-trn); margin-top:10px; text-shadow: var(--tshadow);
+  }
+  .hazel-hint{ margin-top:18px; font-size:0.8rem; color:rgba(255,255,255,0.75); font-style:italic; text-shadow: var(--tshadow); }
+  /* Real fix, 2026-08-18 (design review call §6) — reviewer flagged that
+     clicking Hazel's words for more dialogue wasn't discoverable. The
+     hint already existed but read as a faint decorative caption, easy to
+     miss; a voice line was the call's own suggested fallback, but VO
+     work is explicitly deferred (see the call to-do doc §7), so this is
+     the real fix available now. Scoped to #hazelHint specifically (not
+     the shared .hazel-hint class, which is also reused as a plain
+     caveat caption on the Resting Bank stop, not a clickable prompt) —
+     accent color plus a slow pulse, closer to the site's other glowing
+     CTAs, so this one specific hint reads as actionable. */
+  #hazelHint{
+    font-size:0.85rem; font-weight:600; font-style:normal;
+    color: var(--dept-trn);
+    animation: hazelHintPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes hazelHintPulse{ 0%,100%{ opacity:0.7; } 50%{ opacity:1; } }
+
+  .scroll-btn{
+    font-family:'Open Sans', sans-serif; font-weight:600; font-size:15px; color:#fff;
+    background: rgba(8,18,15,0.55); border:1px solid rgba(var(--dept-trn-rgb),0.6);
+    border-radius:999px; padding:13px 26px; cursor:pointer; margin-top:32px;
+    transition: background .3s ease; display:inline-flex; align-items:center; gap:8px;
+    backdrop-filter: blur(6px);
+  }
+  .scroll-btn:hover{ background: rgba(var(--dept-trn-rgb),0.3); }
+
+  /* Stop 2 — The Bridge Workshop (Open Vacancy).
+     Real fix, round 6 — the old flex-row li wrapped independently and
+     looked broken. Redesigned as a card grid: each fact is its own
+     self-contained block.
+     Real fix, round 7/8 — Hazel stands center-right in this scene, so a
+     single wide block covered her, and the wrapper never got width:100%,
+     so the two columns weren't reaching the true frame edges. Split into
+     two columns (intro left, facts right) that now actually span full
+     width, leaving the middle clear for her. */
+  #scene2{ align-items:flex-end; justify-content:center; }
+  #floor2-wrap{ width:100%; }
+  #floor2.split-row{
+    width:100%; display:flex; flex-wrap:wrap;
+    justify-content:space-between; align-items:flex-end;
+    gap:24px; padding-bottom:10vh;
+  }
+  .split-left{ max-width:340px; }
+  .split-right{ max-width:340px; }
+  .list{
+    list-style:none; margin-top:28px;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+    gap:12px; max-width:680px;
+  }
+  .list li{
+    background: rgba(8,18,15,0.55);
+    border:1px solid rgba(var(--dept-trn-rgb),0.25);
+    border-left:3px solid var(--dept-trn);
+    border-radius:10px;
+    padding:13px 16px;
+    backdrop-filter: blur(6px);
+    color:rgba(255,255,255,0.85);
+    font-size:0.88rem; line-height:1.5;
+  }
+  .list strong{ display:block; color:#fff; font-family:var(--font-display); font-weight:700; font-size:0.95rem; margin-bottom:3px; }
+
+  /* One quiet role summary instead of a stack of UI-style cards. */
+  #floor2 .list{
+    display:block; margin-top:0; padding:20px 22px;
+    background:linear-gradient(135deg, rgba(8,18,15,0.5), rgba(8,18,15,0.28));
+    border:1px solid rgba(var(--dept-trn-rgb),0.28);
+    border-left:3px solid var(--dept-trn); border-radius:14px;
+    backdrop-filter:blur(4px); box-shadow:0 16px 36px rgba(0,0,0,0.18);
+  }
+  #floor2 .list::before{
+    content:'Translator profile'; display:block; margin-bottom:14px;
+    font-family:var(--font-display); font-size:0.7rem; font-weight:700;
+    letter-spacing:0.12em; text-transform:uppercase; color:var(--dept-trn);
+  }
+  #floor2 .list li{
+    padding:0 0 13px; background:none; border:0; border-radius:0;
+    backdrop-filter:none; font-size:0.84rem; line-height:1.45;
+  }
+  #floor2 .list li + li{
+    padding-top:13px; border-top:1px solid rgba(255,255,255,0.13);
+  }
+  #floor2 .list li:last-child{ padding-bottom:0; }
+  #floor2 .list strong{ font-size:0.92rem; margin-bottom:2px; }
+
+  .btn{
+    font-family: var(--font-display); font-weight:600; font-size:0.9rem;
+    padding:0.8rem 1.3rem; border-radius:10px; text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px; transition: all .2s ease;
+    border:none; cursor:pointer; margin-top:30px;
+  }
+  .btn-trn{ background: var(--dept-trn); color:#06120f; }
+  .btn-trn:hover{ background:#87c2bb; transform:translateY(-1px); }
+  .btn-outline{
+    background: rgba(8,18,15,0.55); color: var(--dept-trn); border:1.5px solid var(--dept-trn);
+    backdrop-filter: blur(6px);
+  }
+  .btn-outline:hover{ background: rgba(var(--dept-trn-rgb),0.22); }
+
+  /* Stop 3 — The Bridge Itself (geography/languages) */
+  #scene3{ align-items:center; justify-content:center; text-align:center; }
+  #floor3{ max-width:580px; }
+  #floor3 .eyebrow, #floor6 .eyebrow{ text-align:center; }
+
+  /* Stop 4 — The Sorted Shelves (tools/requirement).
+     Real change, 2026-08-14 — §4-revised (labeled tools) is generated and
+     live. The tool names are now carried by the image itself (real
+     hand-carved tags: GOOGLE DOCS, CAT TOOLS, LINKEDIN, GPT CHAT), so the
+     redundant HTML list card was removed — this was the whole point of
+     generating that art. Kept the one fact the image can't show
+     (the B1+ language requirement). */
+  #scene4{ align-items:flex-start; justify-content:flex-end; text-align:right; }
+  #floor4{ max-width:420px; padding-top:8vh; }
+
+  /* Stop 5 — The Resting Bank (Why Work Here) */
+  #scene5{ align-items:flex-end; justify-content:center; }
+  #floor5{ max-width:880px; padding-bottom:9vh; text-align:center; }
+  #floor5 .benefit-summary{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:8px 20px;
+    margin:26px auto 0; padding:14px 24px;
+    background:rgba(8,18,15,0.38);
+    border:1px solid rgba(var(--dept-trn-rgb),0.3);
+    border-radius:999px; backdrop-filter:blur(5px);
+    color:#fff; font-size:0.9rem; font-weight:600;
+  }
+  #floor5 .benefit-summary span + span::before{
+    content:'•'; color:var(--dept-trn); margin-right:20px;
+  }
+
+  /* Stop 6 — The Notice Board (Apply Now).
+     Real change, round 15 — "Ask Hazel" is back inline as its own stop
+     per direct request, reversing round 11's move to a standalone
+     page. This stop's button now jumps to the Ask Hazel stop instead of
+     linking out.
+     Real change, 2026-08-18 — this was stop 7 before the Firefly
+     Lanterns stop was cut (design review call, see
+     05_Open_Questions_and_Risks/CALL_2026-08-17_DESIGN_REVIEW_TODO.md
+     §4/priority item 4); every stop from here on shifted down by one. */
+  #scene6{ align-items:center; justify-content:center; text-align:center; }
+  #floor6{ max-width:560px; }
+  .cta-row{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:0; }
+
+  /* Stop 7 — Ask Hazel (FAQ chat).
+     Real change, round 15 — moved back in from the standalone
+     ask-hazel.html per direct request ("slide 9 should be a chat with
+     Hazel"). Same real still (09_Ask_Hazel.png, Hazel on the left of the
+     frame) and same fixed pre-written FAQ mechanism — not a live AI
+     backend, see 04_Chat_With_Mascot/OUT_OF_SCOPE.md. Content sits on the
+     right, over the open river/bridge side, same reasoning as the
+     standalone page had. ask-hazel.html still exists separately with the
+     same content — worth deciding whether to keep both or drop one. */
+  #scene7{ align-items:center; justify-content:flex-end; }
+  #floor7{ max-width:540px; text-align:left; }
+
+  .hazel-chat{
+    margin-top:26px;
+    background: rgba(8,18,15,0.6);
+    border:1px solid rgba(var(--dept-trn-rgb),0.3);
+    border-radius:14px;
+    padding:18px 18px 16px;
+    backdrop-filter: blur(8px);
+  }
+  .chat-log{
+    display:flex; flex-direction:column; gap:10px;
+    max-height:240px; overflow-y:auto; margin-bottom:14px;
+    padding-right:4px;
+  }
+  .chat-log:empty{ display:none; }
+  .chat-bubble{
+    font-size:0.88rem; line-height:1.5; padding:9px 13px; border-radius:10px;
+    max-width:85%; text-shadow:none;
+  }
+  .chat-bubble.bot{
+    align-self:flex-start; background:rgba(255,255,255,0.08); color:#fff;
+    border:1px solid rgba(var(--dept-trn-rgb),0.3);
+  }
+  .chat-bubble.user{
+    align-self:flex-end; background: var(--dept-trn); color:#06120f; font-weight:600;
+  }
+  .chat-questions{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chat-q-btn{
+    font-family:'Open Sans', sans-serif; font-size:0.8rem; font-weight:600; color: var(--dept-trn);
+    background:transparent; border:1px solid rgba(var(--dept-trn-rgb),0.5);
+    border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease;
+  }
+  .chat-q-btn:hover{ background: rgba(var(--dept-trn-rgb),0.16); }
+  .chat-q-btn.is-asked{ opacity:0.35; pointer-events:none; }
+</style>
+</head>
+<body>
+
+<div class="scroll-container" id="scrollContainer">
+
+  <img class="corner-logo" src="assets/anyemp_logo.svg" alt="AnyEmp">
+
+  <div class="elevator-panel">
+    <div class="floor-label" id="floorLabel">1</div>
+    <div class="floor-dots" id="floorDots">
+      <div class="dot" data-floor="0"></div>
+      <div class="dot" data-floor="1"></div>
+      <div class="dot" data-floor="2"></div>
+      <div class="dot" data-floor="3"></div>
+      <div class="dot" data-floor="4"></div>
+      <div class="dot" data-floor="5"></div>
+      <div class="dot" data-floor="6"></div>
+      <div class="dot" data-floor="7"></div>
+    </div>
+  </div>
+
+  <!-- Stop 0 — The Bridgewood Crossing (Kingdom overview, new) -->
+  <section class="scene" id="scene0">
+    <video class="scene-bg" data-floor-video="0" src="11_Background_Prompts/Generated_Videos/00_The_Bridgewood_Crossing_Kingdom.mp4" muted loop playsinline preload="auto"></video>
+    <div class="scene-overlay" style="background:linear-gradient(180deg, rgba(6,16,13,0.65) 0%, rgba(6,16,13,0.15) 22%, rgba(6,16,13,0) 45%, rgba(6,16,13,0.15) 78%, rgba(6,16,13,0.6) 100%);"></div>
+    <div class="scene-content" id="floor0-wrap">
+      <div id="floor0">
+        <div class="kingdom-heading">
+          <div class="eyebrow">The Kingdom</div>
+          <h1><span class="accent">The Bridgewood Crossing<span class="dot">.</span></span></h1>
+        </div>
+        <p class="section-sub kingdom-para" style="margin-top:0;">Somewhere in AnyEmp's world, a forest grows down to the bank of a wide, slow river — and one old stone bridge is the only place the two sides ever truly meet. Raccoons have lived along both banks for as long as anyone remembers, sorting stones, carrying symbols, and passing messages hand to hand until they land the same way on the other side. Hazel leads them — the crossing's own translator-in-chief.</p>
+        <div class="kingdom-cta">
+          <button class="scroll-btn" data-jump="1" type="button">Meet Hazel →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 1 — Meet Hazel -->
+  <section class="scene" id="scene1">
+    <video class="scene-bg" data-floor-video="1" src="11_Background_Prompts/Generated_Videos/01_Meet_Hazel.mp4" muted loop playsinline preload="auto"></video>
+    <div class="scene-overlay" style="background:linear-gradient(270deg, rgba(6,16,13,0.6) 0%, rgba(6,16,13,0.2) 42%, rgba(6,16,13,0) 68%);"></div>
+    <div class="scene-content" id="floor1-wrap">
+      <div id="floor1">
+        <div class="eyebrow">The Bridgewood Crossing</div>
+        <h1>Meet <span class="accent">Hazel</span>, our Translators guide.</h1>
+        <div class="speech-bubble" id="hazelBubble">Hi, I'm Hazel — I lead the Translators here at AnyEmp. This is the Bridgewood Crossing, the one place in our world where a message actually gets carried from one language to the next.<span class="who">— Hazel</span></div>
+        <p class="hazel-hint" id="hazelHint">Click Hazel's words to hear more from her →</p>
+        <button class="scroll-btn" data-jump="2" type="button">See the open vacancy ↓</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 2 — The Bridge Workshop (Open Vacancy) -->
+  <section class="scene" id="scene2">
+    <video class="scene-bg" data-floor-video="2" src="11_Background_Prompts/Generated_Videos/02_The_Bridge_Workshop.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:linear-gradient(90deg, rgba(6,16,13,0.55) 0%, rgba(6,16,13,0) 26%), linear-gradient(270deg, rgba(6,16,13,0.55) 0%, rgba(6,16,13,0) 26%);"></div>
+    <div class="scene-content" id="floor2-wrap">
+      <div id="floor2" class="split-row">
+        <div class="split-left">
+          <div class="eyebrow">Open Vacancy · The Bridge Workshop</div>
+          <h2>Translator — Bridgewood Crossing</h2>
+          <p class="section-sub">This isn't just a tour of the workshop — it's a real, open vacancy. Every message that crosses this bridge gets sorted, checked, and carried faithfully from one language into another here, the same way each stone only earns its place on the shelf once it's been properly read. If that's work you'd be good at:</p>
+        </div>
+        <div class="split-right">
+          <ul class="list">
+            <li><strong>Accurate translation</strong>Preserve meaning, tone, and detail.</li>
+            <li><strong>English B1+</strong>Additional languages are a plus.</li>
+            <li><strong>Communication &amp; research</strong>Client correspondence and accurate records.</li>
+          </ul>
+          <button class="btn btn-trn" data-jump="6" type="button">Apply for This Vacancy →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 3 — The Bridge Itself (geography / languages) -->
+  <section class="scene" id="scene3">
+    <video class="scene-bg" data-floor-video="3" src="11_Background_Prompts/Generated_Videos/03_The_Bridge_Itself.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:linear-gradient(180deg, rgba(6,16,13,0.05) 0%, rgba(6,16,13,0.15) 55%, rgba(4,10,8,0.5) 100%);"></div>
+    <div class="scene-content" id="floor3-wrap">
+      <div id="floor3">
+        <div class="eyebrow">The Bridge Itself</div>
+        <h2 style="max-width:none;">Who you'll carry messages for</h2>
+        <p class="lede" style="margin:16px auto 0;">Every path in this kingdom eventually crosses this bridge — including the ones that lead to our real clients. Clients across <strong style="color:#fff;">Europe, Canada, and the US</strong> — primarily in <strong style="color:#fff;">English, Spanish, French, and German</strong>, though every stone from every bank gets sorted eventually.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 4 — The Sorted Shelves (tools / requirement) -->
+  <section class="scene" id="scene4">
+    <video class="scene-bg" data-floor-video="4" src="11_Background_Prompts/Generated_Videos/04_The_Sorted_Shelves.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:linear-gradient(200deg, rgba(6,16,13,0.7) 0%, rgba(6,16,13,0.3) 30%, rgba(6,16,13,0) 55%);"></div>
+    <div class="scene-content" id="floor4-wrap">
+      <div id="floor4">
+        <div class="eyebrow">The Sorted Shelves</div>
+        <h2>The tools of the trade</h2>
+        <p class="section-sub" style="margin-left:auto;">Every shelf here is organized by what it's for, not just what it looks like — four real tools, each with its own place. English B1+ required to join.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 5 — The Resting Bank (Why Work Here) -->
+  <section class="scene" id="scene5">
+    <video class="scene-bg" data-floor-video="5" src="11_Background_Prompts/Generated_Videos/06_The_Resting_Bank.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:linear-gradient(180deg, rgba(6,16,13,0.02) 0%, rgba(6,16,13,0.1) 55%, rgba(4,10,8,0.38) 100%);"></div>
+    <div class="scene-content" id="floor5-wrap">
+      <div id="floor5">
+        <div class="eyebrow">The Resting Bank</div>
+        <h2 style="max-width:none;">Why translators choose to stay</h2>
+        <p class="lede" style="margin:16px auto 0; max-width:none;">Even at the crossing, the work has to end somewhere for the day — this is where it does.</p>
+        <div class="benefit-summary" aria-label="Vacancy benefits">
+          <span>Fully remote</span>
+          <span>International projects</span>
+          <span>Multiple shifts · weekends off</span>
+          <span>Timely pay + project bonuses</span>
+        </div>
+        <p class="hazel-hint" style="margin-top:16px;">Terms shown reflect one real open vacancy — not yet confirmed as universal across every Translator position.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 6 — The Notice Board (Apply Now) -->
+  <section class="scene" id="scene6">
+    <video class="scene-bg" data-floor-video="6" src="11_Background_Prompts/Generated_Videos/07_The_Notice_Board.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:radial-gradient(ellipse at center, rgba(6,16,13,0.05) 0%, rgba(6,16,13,0.25) 55%, rgba(4,10,8,0.55) 100%);"></div>
+    <div class="scene-content" id="floor6-wrap">
+      <div id="floor6">
+        <div class="eyebrow">The Notice Board · Apply Now</div>
+        <h2 style="max-width:none;">Ready to carry the message across?</h2>
+        <button class="btn btn-outline" data-jump="7" type="button" style="margin-top:20px;">Ask Hazel a Question →</button>
+        <p class="lede" style="margin:20px auto 26px; max-width:none;">This vacancy is real and open right now.</p>
+        <div class="cta-row" style="margin-top:0;">
+          <a href="https://t.me/RemotEmployees_Ievgeniia" target="_blank" rel="noopener" class="btn btn-trn">Message on Telegram to Apply →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stop 7 — Ask Hazel (FAQ chat) -->
+  <section class="scene" id="scene7">
+    <video class="scene-bg" data-floor-video="7" src="11_Background_Prompts/Generated_Videos/09_Ask_Hazel.mp4" muted loop playsinline preload="none"></video>
+    <div class="scene-overlay" style="background:linear-gradient(270deg, rgba(6,16,13,0.62) 0%, rgba(6,16,13,0.15) 45%, rgba(6,16,13,0) 68%);"></div>
+    <div class="scene-content" id="floor7-wrap">
+      <div id="floor7">
+        <div class="eyebrow">Ask Hazel</div>
+        <h2 style="max-width:none;">Still have questions about the vacancy?</h2>
+        <p class="lede" style="max-width:none;">Ask Hazel — real answers about the role, before you apply.</p>
+        <div class="hazel-chat">
+          <div class="chat-log" id="chatLog"></div>
+          <div class="chat-questions" id="chatQuestions"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.scene'));
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.floor-dots .dot'));
+  var floorLabel = document.getElementById('floorLabel');
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Videos indexed by their real data-floor-video value, not DOM order —
+  // Stop 0 (Kingdom overview) has no video yet, so a positional array
+  // would misalign every stop after it. This stays correct however many
+  // stops do or don't have a video.
+  var videos = [];
+  Array.prototype.slice.call(document.querySelectorAll('[data-floor-video]')).forEach(function(v){
+    videos[Number(v.dataset.floorVideo)] = v;
+  });
+
+  // NOTE — no real per-stop ambient audio exists yet for Translators
+  // (TRN_story_and_structure.md's Sound Design section is still draft,
+  // nothing generated in Suno). When real cues exist, add
+  // <audio data-floor-audio="N"> elements per section and extend
+  // setVideoActive() below to also play/pause the matching audio element —
+  // same visibility signal already computed here, no restructuring needed.
+
+  function setVideoActive(video, active){
+    if(!video) return;
+    if(active){
+      if(video.preload !== 'auto') video.preload = 'auto';
+      if(video.src && !video.currentSrc) video.load();
+      if(!reduced){
+        var p = video.play();
+        if(p && p.catch) p.catch(function(){});
+      }
+    } else if(!video.paused || video.preload !== 'none'){
+      video.pause();
+      video.removeAttribute('preload');
+      video.preload = 'none';
+      try{ video.currentTime = 0; }catch(e){}
+      video.load();
+    }
+  }
+
+  function updateFloor(index){
+    floorLabel.textContent = String(index + 1);
+    dots.forEach(function(dot){
+      dot.classList.toggle('is-active', Number(dot.dataset.floor) === index);
+    });
+  }
+
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var index = sections.indexOf(entry.target);
+        var ratio = entry.intersectionRatio;
+        if(ratio > 0.3) entry.target.classList.add('is-visible');
+        setVideoActive(videos[index], ratio > 0.3);
+        if(ratio > 0.55) updateFloor(index);
+      });
+    }, { threshold: [0, 0.3, 0.55, 1] });
+    sections.forEach(function(s){ io.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('is-visible'); });
+  }
+
+  function jumpToFloor(index){
+    var target = sections[index];
+    if(target) target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+  }
+  Array.prototype.slice.call(document.querySelectorAll('[data-jump]')).forEach(function(btn){
+    btn.addEventListener('click', function(){ jumpToFloor(Number(btn.dataset.jump)); });
+  });
+
+  // Meet Hazel — click-through dialogue. Line 1 is new (self + company
+  // intro, written 2026-08-13); lines 2–3 are the two previously-locked
+  // real lines (philosophy, then the real geography/language fact) from
+  // MASCOT_IDENTITY_LOCK.md / 01_CONTENT_AND_STRUCTURE.md.
+  var lines = [
+    'Hi, I’m Hazel — I lead the Translators here at AnyEmp. This is the Bridgewood Crossing, the one place in our world where a message actually gets carried from one language to the next.',
+    'A message doesn’t count until it lands the same way on both banks. That’s the only job that matters.',
+    'We carry messages between Europe, Canada, and the US — mostly in English, Spanish, French, and German, though every stone from every bank gets sorted eventually.'
+  ];
+  var lineIndex = 0;
+  var bubble = document.getElementById('hazelBubble');
+  var hint = document.getElementById('hazelHint');
+  if(bubble){
+    bubble.addEventListener('click', function(){
+      lineIndex = (lineIndex + 1) % lines.length;
+      bubble.innerHTML = lines[lineIndex] + '<span class="who">— Hazel</span>';
+      hint.textContent = lineIndex === lines.length - 1
+        ? 'Click again to hear it from the start →'
+        : 'Click Hazel’s words to hear more from her →';
+    });
+  }
+
+  // Ask Hazel — fixed, pre-written FAQ chat (real mechanism, not a live
+  // AI backend — see 04_Chat_With_Mascot/OUT_OF_SCOPE.md). Every answer
+  // is grounded in real facts already established elsewhere on this page
+  // (01_CONTENT_AND_STRUCTURE.md). Same content as ask-hazel.html.
+  var faq = [
+    {
+      q: 'What does this role actually involve?',
+      a: 'Text translation, researching contacts and companies, corresponding with clients on LinkedIn, and keeping the CRM up to date — real work, not busywork.'
+    },
+    {
+      q: 'What languages do I need?',
+      a: 'English at B1 level or above is required. Any additional language is a real plus.'
+    },
+    {
+      q: 'What tools will I use?',
+      a: 'Google Docs, LinkedIn, GPT chat, and CAT (computer-assisted translation) tools — nothing exotic, just used well.'
+    },
+    {
+      q: 'Is this remote?',
+      a: 'Fully remote, with real international projects across Europe, Canada, and the US.'
+    },
+    {
+      q: 'What’s the schedule like?',
+      a: 'Shift-based, with Saturdays and Sundays off — there’s more than one shift option, not just a single fixed schedule.'
+    },
+    {
+      q: 'What’s the pay?',
+      a: 'That’s not something I can share here on the bridge — message our recruiter directly on Telegram and ask them.',
+      cta: true
+    },
+    {
+      q: 'How do I apply?',
+      a: 'Message our recruiter directly on Telegram — that’s the whole process.',
+      cta: true
+    }
+  ];
+  var chatLog = document.getElementById('chatLog');
+  var chatQuestions = document.getElementById('chatQuestions');
+  if(chatLog && chatQuestions){
+    faq.forEach(function(item){
+      var qBtn = document.createElement('button');
+      qBtn.type = 'button';
+      qBtn.className = 'chat-q-btn';
+      qBtn.textContent = item.q;
+      qBtn.addEventListener('click', function(){
+        var userBubble = document.createElement('div');
+        userBubble.className = 'chat-bubble user';
+        userBubble.textContent = item.q;
+        chatLog.appendChild(userBubble);
+
+        var botBubble = document.createElement('div');
+        botBubble.className = 'chat-bubble bot';
+        botBubble.textContent = item.a;
+        chatLog.appendChild(botBubble);
+
+        if(item.cta){
+          var link = document.createElement('a');
+          link.href = 'https://t.me/RemotEmployees_Ievgeniia';
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.className = 'btn btn-trn';
+          link.style.marginTop = '10px';
+          link.style.display = 'inline-flex';
+          link.textContent = 'Message on Telegram →';
+          botBubble.appendChild(document.createElement('br'));
+          botBubble.appendChild(link);
+        }
+
+        qBtn.classList.add('is-asked');
+        chatLog.scrollTop = chatLog.scrollHeight;
+      });
+      chatQuestions.appendChild(qBtn);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
